@@ -114,6 +114,58 @@ def plot_signal(signal_data, title, label, x_offset=0):
 
 # --- Main Streamlit App ---
 def main():
+    # State to show equation input
+    if 'show_eq_input' not in st.session_state:
+        st.session_state['show_eq_input'] = False
+
+    # Sidebar button to show equation input
+    if not st.session_state['show_eq_input']:
+        if st.sidebar.button("Equation Input", key="eq_input_btn"):
+            st.session_state['show_eq_input'] = True
+
+    if st.session_state['show_eq_input']:
+        st.markdown("<h3 style='text-align: center;'>Equation Input</h3>", unsafe_allow_html=True)
+        st.write("Enter a mathematical equation in terms of x (e.g., sin(x), x**2+3*x, exp(-x)). Common functions: sin, cos, tan, exp, log, sqrt.")
+        eq = st.text_input("Equation (in terms of x):", value="sin(x)")
+        eq_x = np.arange(50)
+        safe_dict = {
+            "x": eq_x,
+            "sin": np.sin,
+            "cos": np.cos,
+            "tan": np.tan,
+            "exp": np.exp,
+            "log": np.log,
+            "sqrt": np.sqrt,
+            "abs": np.abs,
+            "pi": np.pi,
+            "e": np.e
+        }
+        eq_y = None
+        try:
+            eq_y = eval(eq, {"__builtins__": None}, safe_dict)
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = plot_signal(eq_y, "Custom Signal from Equation", "Equation Signal")
+                buf = io.BytesIO()
+                fig.savefig(buf, format="png")
+                st.download_button("Save Plot", buf.getvalue(), file_name="equation_plot.png", mime="image/png")
+            with col2:
+                impulse = np.zeros_like(eq_y)
+                impulse[0] = 1
+                response = np.convolve(eq_y, impulse, mode='full')
+                fig2 = plot_signal(response, "Impulse Response (Convolution)", "Impulse Response")
+                buf2 = io.BytesIO()
+                fig2.savefig(buf2, format="png")
+                st.download_button("Save Convolution Plot", buf2.getvalue(), file_name="equation_convolution.png", mime="image/png")
+        except Exception as e:
+            st.error(f"Error in equation: {e}")
+        if eq_y is not None:
+            if st.button("Analyze Properties", key="analyze_props"):
+                st.session_state['custom_signal'] = eq_y
+                st.session_state['show_eq_input'] = False
+        if st.button("Back to Home", key="back_to_props"):
+            st.session_state['show_eq_input'] = False
+        return
     st.set_page_config(page_title="Impulsify", layout="wide")
     st.markdown(
         """
@@ -145,28 +197,37 @@ def main():
 
     # Generate signals
     impulse = generate_impulse(length, impulse_pos)
-    if signal_type == "Sine":
-        sig = generate_sine(length, freq, amp)
-    elif signal_type == "Square":
-        sig = generate_square(length, freq, amp)
-    elif signal_type == "Ramp":
-        sig = np.linspace(0, amp, length)
-    elif signal_type == "Sawtooth":
-        t = np.arange(length)
-        sig = amp * signal.sawtooth(2 * np.pi * freq * t / length)
-    elif signal_type == "Impulse":
-        sig = generate_impulse(length, impulse_pos)
+    if 'custom_signal' in st.session_state:
+        sig = st.session_state['custom_signal']
+        # If custom signal length doesn't match impulse, adjust impulse
+        if len(sig) != len(impulse):
+            impulse = generate_impulse(len(sig), 0)
     else:
-        sig = generate_noise(length, amp)
+        if signal_type == "Sine":
+            sig = generate_sine(length, freq, amp)
+        elif signal_type == "Square":
+            sig = generate_square(length, freq, amp)
+        elif signal_type == "Ramp":
+            sig = np.linspace(0, amp, length)
+        elif signal_type == "Sawtooth":
+            t = np.arange(length)
+            sig = amp * signal.sawtooth(2 * np.pi * freq * t / length)
+        elif signal_type == "Impulse":
+            sig = generate_impulse(length, impulse_pos)
+        else:
+            sig = generate_noise(length, amp)
 
     st.subheader("Original Signals")
     col1, col2 = st.columns(2)
     with col1:
         plot_signal(impulse, "Impulse Signal", "Impulse")
     with col2:
-        plot_signal(sig, f"{signal_type} Signal", signal_type)
+        if 'custom_signal' in st.session_state:
+            plot_signal(sig, "Custom Equation", "Custom Equation")
+        else:
+            plot_signal(sig, f"{signal_type} Signal", signal_type)
 
-    # Tabs for Analysis
+    # Tabs for Analysis (no Equation Input tab)
     tab_conv, tab1, tab2, tab3, tab4, tab5 = st.tabs(["Convolution", "Amplitude Scaling", "Time Scaling", "Sifting", "Addition", "Multiplication"])
     # --- Convolution ---
     with tab_conv:
