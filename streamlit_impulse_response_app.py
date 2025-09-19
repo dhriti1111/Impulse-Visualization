@@ -64,12 +64,14 @@ def time_scaling(signal, scale):
 # --- Plotting Helper ---
 def plot_signal(signal_data, title, label, x_offset=0):
     fig, ax = plt.subplots(facecolor='none')
-    
     N = len(signal_data)
-    # The x values should start from x_offset and go up to x_offset + N - 1
-    x = np.arange(N) + x_offset 
-    
-    ax.plot(x, signal_data, label=label, linewidth=2.5)
+    x = np.arange(N) + x_offset
+    # Use stem plot if discrete time mode is enabled
+    discrete = st.session_state.get('discrete_time', False)
+    if discrete:
+        ax.stem(x, signal_data, linefmt='C0-', markerfmt='C0o', basefmt='k-', label=label)
+    else:
+        ax.plot(x, signal_data, label=label, linewidth=2.5)
     
     # Adjust x-limits to show the entire relevant range including negative if x_offset is negative
     min_x_val = np.min(x)
@@ -114,6 +116,11 @@ def plot_signal(signal_data, title, label, x_offset=0):
 
 # --- Main Streamlit App ---
 def main():
+    # Sidebar option for discrete time view
+    st.sidebar.markdown('---')
+    st.sidebar.subheader('View Options')
+    discrete_time = st.sidebar.checkbox('Show in Discrete Time', value=False)
+    st.session_state['discrete_time'] = discrete_time
     # State to show equation input
     if 'show_eq_input' not in st.session_state:
         st.session_state['show_eq_input'] = False
