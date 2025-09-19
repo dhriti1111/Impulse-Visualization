@@ -63,7 +63,7 @@ def time_scaling(signal, scale):
 
 # --- Plotting Helper ---
 def plot_signal(signal_data, title, label, x_offset=0):
-    fig, ax = plt.subplots(facecolor='none')
+    fig, ax = plt.subplots(facecolor='#232526')
     N = len(signal_data)
     x = np.arange(N) + x_offset
     # Use stem plot if discrete time mode is enabled
@@ -87,10 +87,15 @@ def plot_signal(signal_data, title, label, x_offset=0):
     
     ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True)) # Ensure integer ticks for x-axis
     
+    ax.set_facecolor('#232526')
+    fig.patch.set_facecolor('#232526')
     ax.set_title(title, color='white')
     ax.set_xlabel('Sample', color='white')
     ax.set_ylabel('Amplitude', color='white')
-    ax.legend()
+    leg = ax.legend(facecolor='#232526', edgecolor='white', labelcolor='white')
+    if leg:
+        leg.get_frame().set_facecolor('#232526')
+        leg.get_frame().set_edgecolor('white')
     ax.grid(True, color='#FFFFFF', alpha=0.04, linewidth=0.8)
     ax.tick_params(axis='x', colors='white')
     ax.tick_params(axis='y', colors='white')
@@ -112,6 +117,9 @@ def plot_signal(signal_data, title, label, x_offset=0):
         ax.set_ylim(ymin - y_range_padding, ymax + y_range_padding)
 
     st.pyplot(fig, transparent=True)
+    fig.patch.set_facecolor('#232526')
+    ax.set_facecolor('#232526')
+    fig.tight_layout()
     return fig
 
 # --- Main Streamlit App ---
@@ -154,7 +162,7 @@ def main():
             with col1:
                 fig = plot_signal(eq_y, "Custom Signal from Equation", "Equation Signal")
                 buf = io.BytesIO()
-                fig.savefig(buf, format="png")
+                fig.savefig(buf, format="png", bbox_inches='tight', facecolor=fig.get_facecolor(), transparent=False)
                 st.download_button("Save Plot", buf.getvalue(), file_name="equation_plot.png", mime="image/png")
             with col2:
                 impulse = np.zeros_like(eq_y)
@@ -162,7 +170,7 @@ def main():
                 response = np.convolve(eq_y, impulse, mode='full')
                 fig2 = plot_signal(response, "Impulse Response (Convolution)", "Impulse Response")
                 buf2 = io.BytesIO()
-                fig2.savefig(buf2, format="png")
+                fig2.savefig(buf2, format="png", bbox_inches='tight', facecolor=fig2.get_facecolor(), transparent=False)
                 st.download_button("Save Convolution Plot", buf2.getvalue(), file_name="equation_convolution.png", mime="image/png")
         except Exception as e:
             st.error(f"Error in equation: {e}")
